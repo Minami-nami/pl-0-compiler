@@ -1,0 +1,8 @@
+{
+    "xmake.debuggingTargetsArguments": {
+        "default": ["../../../../static/samples/sample1.pl0"]
+    },
+    "xmake.runningTargetsArguments": {
+        "default": ["../../../../static/samples/sample1.pl0"]
+    }
+}
