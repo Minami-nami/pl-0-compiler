@@ -1,5 +1,6 @@
 #pragma once
 #include "Lexer.h"
+#include "Error.h"
 
 /*
 <prog> → program <id>；<block>
@@ -33,48 +34,11 @@
 odd：判断表达式的奇偶性。
 */
 
-enum class SYNERROR {
-    EXPECTING_PROGRAM,
-    EXPECTING_SEMICOLON,
-    EXPECTING_BEGIN,
-    EXPECTING_END,
-    EXPECTING_CONST,
-    EXPECTING_IDENTIFIER,
-    EXPECTING_INTEGER,
-    EXPECTING_LPAREN,
-    EXPECTING_RPAREN,
-    EXPECTING_STATEMENT,
-    EXPECTING_CMPOPERATOR,
-    EXPECTING_ADDOPERATOR,
-    EXPECTING_MULOPERATOR,
-    EXPECTING_ODD,
-    EXPECTING_EXPR,
-    EXPECTING_DO,
-    EXPECTING_THEN,
-    MISSING_SEMICOLON,
-    MISSING_COMMA,
-    MISSING_IDENTIFIER,
-    MISSING_INTEGER,
-    MISSING_STATEMENT,
-    MISSING_CMPOPERATOR,
-    MISSING_ADDOPERATOR,
-    MISSING_MULOPERATOR,
-    MISSING_LEXPR,
-    MISSING_EXPR,
-    MISSING_LPAREN,
-    MISSING_RPAREN,
-    UNEXPECTED_TOKEN
-};
-
 class Parser
 {
 private:
     Lexer lexer;
-
-
     
-    void ProcError(SYNERROR type, std::unordered_set<Token, KeyHash, Equal>::iterator it);
-
     void ProcProg();
     void ProcBlock();
     void ProcCondecl();

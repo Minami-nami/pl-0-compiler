@@ -4,10 +4,6 @@ add_cxflags("-fdiagnostics-color=always", "-Wall", "-Wextra")
 add_includedirs("include")
 set_languages("c17", "c++20")
 
-if is_mode("debug") then 
-    add_cxflags("-g3")
-end
-
 target("includes")
     set_kind("shared")
     add_files("include/*.cpp")

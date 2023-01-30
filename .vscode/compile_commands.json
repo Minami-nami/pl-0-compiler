@@ -1,36 +1,46 @@
 [
 {
   "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\parser\\windows\\x64\\debug\\src\\parser\\main.cpp.obj", "src\\parser\\main.cpp"],
-  "file": "src\\parser\\main.cpp"
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Error.cpp.obj", "include\\Error.cpp"],
+  "file": "include\\Error.cpp"
 },
 {
   "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\sample\\windows\\x64\\debug\\src\\Sample\\pl0.cpp.obj", "src\\Sample\\pl0.cpp"],
-  "file": "src\\Sample\\pl0.cpp"
-},
-{
-  "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\test\\windows\\x64\\debug\\src\\main.cpp.obj", "src\\main.cpp"],
-  "file": "src\\main.cpp"
-},
-{
-  "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\lexer\\windows\\x64\\debug\\src\\lexer\\main.cpp.obj", "src\\lexer\\main.cpp"],
-  "file": "src\\lexer\\main.cpp"
-},
-{
-  "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Lexer.cpp.obj", "include\\Lexer.cpp"],
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Lexer.cpp.obj", "include\\Lexer.cpp"],
   "file": "include\\Lexer.cpp"
 },
 {
   "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\PL0Parser.cpp.obj", "include\\PL0Parser.cpp"],
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\PL0Parser.cpp.obj", "include\\PL0Parser.cpp"],
   "file": "include\\PL0Parser.cpp"
 },
 {
   "directory": "e:\\162010219\\2022\\compiler",
-  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-g3", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Symbol.cpp.obj", "include\\Symbol.cpp"],
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Symbol.cpp.obj", "include\\Symbol.cpp"],
   "file": "include\\Symbol.cpp"
+},
+{
+  "directory": "e:\\162010219\\2022\\compiler",
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\includes\\windows\\x64\\debug\\include\\Token.cpp.obj", "include\\Token.cpp"],
+  "file": "include\\Token.cpp"
+},
+{
+  "directory": "e:\\162010219\\2022\\compiler",
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\parser\\windows\\x64\\debug\\src\\parser\\main.cpp.obj", "src\\parser\\main.cpp"],
+  "file": "src\\parser\\main.cpp"
+},
+{
+  "directory": "e:\\162010219\\2022\\compiler",
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\test\\windows\\x64\\debug\\src\\main.cpp.obj", "src\\main.cpp"],
+  "file": "src\\main.cpp"
+},
+{
+  "directory": "e:\\162010219\\2022\\compiler",
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\sample\\windows\\x64\\debug\\src\\Sample\\pl0.cpp.obj", "src\\Sample\\pl0.cpp"],
+  "file": "src\\Sample\\pl0.cpp"
+},
+{
+  "directory": "e:\\162010219\\2022\\compiler",
+  "arguments": ["D:\\mingw64\\bin\\x86_64-w64-mingw32-g++.exe", "-c", "-g", "-O0", "-std=c++20", "-Iinclude", "-DUNICODE", "-D_UNICODE", "-fexceptions", "-fdiagnostics-color=always", "-Wall", "-Wextra", "-o", "build\\.objs\\lexer\\windows\\x64\\debug\\src\\lexer\\main.cpp.obj", "src\\lexer\\main.cpp"],
+  "file": "src\\lexer\\main.cpp"
 }]

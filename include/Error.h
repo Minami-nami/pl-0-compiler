@@ -1,0 +1,55 @@
+#pragma once
+#include <string>
+#include <filesystem>
+enum class ERROR {
+    ILEGAL_CHARACTER,
+    ILEGAL_IDENTIFIER,
+    MISSING_BECOMES,
+    MISSING_DO,
+    MISSING_STATEMENT,
+    MISSING_ELSE,
+    EXPECTING_PROGRAM,
+    EXPECTING_SEMICOLON,
+    EXPECTING_BEGIN,
+    EXPECTING_END,
+    EXPECTING_CONST,
+    EXPECTING_IDENTIFIER,
+    EXPECTING_INTEGER,
+    EXPECTING_LPAREN,
+    EXPECTING_RPAREN,
+    EXPECTING_STATEMENT,
+    EXPECTING_CMPOPERATOR,
+    EXPECTING_ADDOPERATOR,
+    EXPECTING_MULOPERATOR,
+    EXPECTING_ODD,
+    EXPECTING_EXPR,
+    EXPECTING_DO,
+    EXPECTING_THEN,
+    EXPECTING_FACTOR,
+    EXPECTING_PROCEDURE,
+    MISSING_SEMICOLON,
+    MISSING_COMMA,
+    MISSING_IDENTIFIER,
+    MISSING_INTEGER,
+    MISSING_CMPOPERATOR,
+    MISSING_ADDOPERATOR,
+    MISSING_MULOPERATOR,
+    MISSING_LEXPR,
+    MISSING_EXPR,
+    MISSING_LPAREN,
+    MISSING_RPAREN,
+    MISSING_THEN,
+    MISSING_COLON,
+    OUT_OF_RANGE,
+    UNEXPECTED_TOKEN
+};
+
+class Error {
+private:
+    int ErrCnt;
+public:
+    Error():ErrCnt(0){}
+    void ProcError(ERROR etype, int row, int col, const std::string& token, const std::string& line, const std::string& path);
+};
+
+std::string toString(ERROR eType);
