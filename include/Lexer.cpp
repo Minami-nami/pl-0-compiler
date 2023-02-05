@@ -58,12 +58,14 @@ Lexer::Lexer(): row(1), col(0), curType(TokenType::ERROR), remain(false), END(fa
 
 Lexer::~Lexer() {}
 
-bool Lexer::LoadFile(const char* FilePath) {
+bool Lexer::LoadFile(const std::string& FilePath) {
     row = 1, col = 0;
     curType = TokenType::ERROR;
     remain = false;
     END = false;
     Path = std::string(FilePath);
+    std::filesystem::path codePath = std::filesystem::path(Path).replace_extension(".pcode");
+    std::filesystem::remove(codePath);
     std::ifstream CodeFile;
     CodeFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     try {
@@ -88,14 +90,12 @@ void Lexer::ClearBuf() {
     CodeStream.str("");
 }
 
-bool Lexer::WriteFile() {
+bool Lexer::write(const std::filesystem::path& WritePath) {
     /* _______________________________________________
      *      name     |    type    |   row   |   col   
      * ———————————————————————————————————————————————
      *     lololol        inde         2         1     
     */
-    std::filesystem::path WritePath = Path;
-    WritePath.replace_extension(".token");
     std::ofstream TokenFile;
     TokenFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
     ClearBuf();
@@ -125,7 +125,7 @@ bool Lexer::WriteFile() {
     return true;
 }
 
-std::pair<TokenType, std::unordered_set<Token, KeyHash, Equal>::iterator> Lexer::getToken() {
+std::pair<TokenType, std::unordered_set<Token, KeyHash_Token, Equal_Token>::iterator> Lexer::getToken() {
     if (remain) {
         remain = false;
         return std::make_pair(curType, it);
@@ -146,7 +146,7 @@ std::pair<TokenType, std::unordered_set<Token, KeyHash, Equal>::iterator> Lexer:
     while (lineptr != linebuf.end()) {
         char ch = *(lineptr++);
         ++col;
-        std::pair<std::unordered_set<Token, KeyHash>::iterator, bool> rt;
+        std::pair<std::unordered_set<Token, KeyHash_Token>::iterator, bool> rt;
         switch (curstate) {
         case state::BEGIN:{
             token += ch;
@@ -317,6 +317,10 @@ void Lexer::Keep() {
     remain = true;
 }
 
-void Lexer::Err(ERROR etype, std::unordered_set<Token, KeyHash, Equal>::iterator it) {
+void Lexer::Err(ERROR etype, std::unordered_set<Token, KeyHash_Token, Equal_Token>::iterator it) {
     error.ProcError(etype, row, this->col + 1 - static_cast<int>(it->name.size()), it->name, linebuf, Path.string());
+}
+
+void Lexer::Err(ERROR etype, int real, int expected) {
+    error.ProcError(etype, real, expected);
 }

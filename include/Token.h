@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 
+
 enum class TokenType {
 //KEYWORDS
     PROGRAM,        //  program
@@ -42,6 +43,23 @@ enum class TokenType {
     ERROR,
     ENDOFFILE
 };
+
+bool StatementBegin(TokenType type);
+bool StatementEnd(TokenType type);
+bool BlockBegin(TokenType type);
+bool BlockEnd(TokenType type);
+bool cmpop(TokenType type);
+bool addop(TokenType type);
+bool mulop(TokenType type);
+bool op(TokenType type);
+bool FactorBegin(TokenType type);
+bool FactorEnd(TokenType type);
+bool TermBegin(TokenType type);
+bool TermEnd(TokenType type);
+bool ExpBegin(TokenType type);
+bool ExpEnd(TokenType type);
+bool LexpBegin(TokenType type);
+bool LexpEnd(TokenType type);
 
 TokenType isKeyword(const std::string& token);
 

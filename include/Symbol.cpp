@@ -1,15 +1,18 @@
 #include "Symbol.h"
 #include <unordered_map>
+#include <filesystem>
 #include <string>
+#include <iostream>
 #include <cstdio>
 
 const std::unordered_map<SymbolType, std::string> TP = {
-    {SymbolType::CONST,     "const"},   {SymbolType::VAR,   "var"},     {SymbolType::PROCEDURE, "procedure"},
-    {SymbolType::PROGRAM,   "program"}, {SymbolType::PARAM, "param"},   {SymbolType::NONE,      "none"}
+    {SymbolType::CONST,     "const"},       {SymbolType::VAR,       "var"}, 
+    {SymbolType::PROCEDURE, "procedure"},   {SymbolType::PROGRAM,   "program"}
 };
 
-std::string Symbol::toString() const {
-    /* __________________________________________________________________
+std::string Symbol::toString(const std::string& name) const {
+    /* Program main:
+     * __________________________________________________________________
      *      name     |    type    |   val/level   |  address  |   size   
      * ——————————————————————————————————————————————————————————————————
      * sample         sample       2               1           4
@@ -22,8 +25,7 @@ std::string Symbol::toString() const {
     return std::string(bf);
 }
 
-Symbol::Symbol(const std::string& name, SymbolType type, int val, int address, int level, int size) {
-    this->name = name;
+Symbol::Symbol(SymbolType type, int val, int address, int level, int size) {
     this->type = type;
     this->val = val;
     this->address = address;
@@ -33,4 +35,42 @@ Symbol::Symbol(const std::string& name, SymbolType type, int val, int address, i
 
 Symbol::~Symbol() {
     
+}
+
+bool SymbolTable::insert(const std::string& Sname, const Symbol& s) {
+    auto it = this->table.find(Sname);
+    if (it == this->table.end()) {
+        this->table.insert({Sname, s});
+        return true;
+    }
+    else 
+        return false;
+}
+
+bool SymbolTable::exist(const std::string& Sname) {
+    return this->table.find(Sname) != this->table.end();
+}
+
+std::pair<std::string, Symbol*> SymbolTable::search(const std::string& Sname) {
+    auto it = this->table.find(Sname);
+    if (it != this->table.end())
+        return std::make_pair(it->first, &(it->second));
+    else return this->prev == nullptr? std::make_pair("", nullptr): this->prev->search(Sname);
+}
+
+void SymbolTable::write(std::ofstream& output) {
+    if (prev == nullptr)
+        output << "Program ";
+    else 
+        output << "Procedure ";
+    output << name << ":\n";
+    output << "__________________________________________________________________\n"
+            "     name     |    type    |   val/level   |  address  |   size   \n"
+            "——————————————————————————————————————————————————————————————————\n";
+    for (auto&& [Sname, symbol]: table) {
+        output << symbol.toString(Sname) << '\n';
+    }
+    for (auto&& [_, symboltable]: childs) {
+        symboltable.write(output);
+    }
 }

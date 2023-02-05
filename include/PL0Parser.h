@@ -1,7 +1,9 @@
 #pragma once
 #include "Lexer.h"
-#include "Error.h"
-
+#include "Code.h"
+#include <vector>
+#include <array>
+constexpr int maxCodeSize = 1024;
 /*
 <prog> → program <id>；<block>
 <block> → [<condecl>][<vardecl>][<proc>]<body>
@@ -38,39 +40,41 @@ class Parser
 {
 private:
     Lexer lexer;
-    
+    SymbolTable base;
+    std::vector<SymbolTable*> stk;
+    Symbol* last;
     void ProcProg();
-    void ProcBlock();
-    void ProcCondecl();
-    void ProcConst();
-    void ProcVardecl();
-    void ProcVar();
-    void ProcProc();
-    void ProcProcParam();
-    void ProcBody();
-    void ProcMultiStatement();
-    void ProcStatement();
-    void ProcLexp();
-    void ProcExp();
-    void ProcTerm();
-    void ProcFactor();
-    void ProcLop();
-    void ProcId(bool decl, SymbolType Stype);
-    void ProcInteger();
-    void ProcIf();
-    void ProcWhile();
-    void ProcCall();
-    void ProcCallParam();
-    void ProcRead();
-    void ProcReadParam();
-    void ProcWrite();
-    void ProcWriteParam();
-    void ProcAssign();
+    void ProcBlock(const std::string& name, int level, int &offset);
+    void ProcCondecl(int level, int &offset);
+    void ProcVardecl(int level, int &offset);
+    void ProcProc(int level, int &offset);
+    void ProcProcParam(int level, int &offset);
+    void ProcBody(int level);
+    void ProcMultiStatement(int level);
+    void ProcStatement(int level);
+    void ProcLexp(int level);
+    void ProcExp(int level);
+    void ProcTerm(int level);
+    void ProcFactor(int level);
+    TokenType ProcLop();
+    std::string ProcId(int level, bool decl, SymbolType Stype, int &offset);
+    int  ProcInteger();
+    void ProcIf(int level);
+    void ProcWhile(int level);
+    void ProcCall(int level);
+    int  ProcCallParam(int level);
+    void ProcRead(int level);
+    void ProcReadParam(int level);
+    void ProcWrite(int level);
+    void ProcWriteParam(int level);
+    void ProcAssign(int level);
     void ProcBecomes();
-
 public:
-    Parser();
-    ~Parser();
-    void loadFile(const char* FilePath);
+    std::vector<Ins> Code;
+    Parser(): base("main"){}
+    ~Parser() {}
+    void loadFile(const std::string& path);
     void analyze();
+    void write();
+    void gen(oprType type, int l, int a);
 };

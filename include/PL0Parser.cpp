@@ -1,9 +1,15 @@
 #include "PL0Parser.h"
+#include "Code.h"
 #include <string.h>
+#include <algorithm>
+#include <fstream>
+constexpr int initAllocateSize = 3;
+constexpr int maxNestLevel = 4;
 
 //<prog> → program <id>；<block>
 void Parser::ProcProg() {
-    this->ProcId(true, SymbolType::PROGRAM);                             //<id>
+    int allocateSize = initAllocateSize;
+    std::string name = this->ProcId(0, true, SymbolType::PROGRAM, allocateSize);                             //<id>
     while (!lexer.END) {                      //;
         auto [type, value] = lexer.getToken();
         if (type == TokenType::SEMICOLON) {
@@ -18,75 +24,90 @@ void Parser::ProcProg() {
             lexer.Err(ERROR::EXPECTING_SEMICOLON, value);
         }
     }
-    this->ProcBlock();                          //<block>
+    this->ProcBlock(name, 0, allocateSize);                          //<block>
 }
 
 //<block> → [<condecl>][<vardecl>][<proc>]<body>
-void Parser::ProcBlock() {
+void Parser::ProcBlock(const std::string& name, int level, int &offset) {
+    int Cx = Code.size();
+    gen(oprType::JMP, 0, 0);                                        //1
+    int parameterNum = offset - initAllocateSize;
+    int allocateSize = initAllocateSize;
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         switch (type)
         {
         case TokenType::CONST:
-            this->ProcCondecl();
-            return;
+            this->ProcCondecl(level, offset);
+            break;
         case TokenType::VAR:
-            this->ProcVardecl();
-            return;
+            this->ProcVardecl(level, offset);
+            break;
         case TokenType::PROCEDURE:
-            this->ProcProc();
-            return;
+            if (level > maxNestLevel) {
+                lexer.Err(ERROR::EXCEED_MAX_NEST_LEVEL, value);
+            }
+            this->ProcProc(level, allocateSize);
+            break;
+        case TokenType::READ:
+        case TokenType::IDENTIFIER:
+        case TokenType::CALL:
+        case TokenType::WRITE:
+        case TokenType::WHILE:
+        case TokenType::IF:
+        case TokenType::END:
+            lexer.Keep();
+            lexer.Err(ERROR::MISSING_BEGIN, value);
+            [[fallthrough]];
         case TokenType::BEGIN:
-            this->ProcBody();
+            if (level != 0 && !stk.empty()) {
+                auto [_, symbol] = stk.end()[-2]->search(name);
+                symbol->size = offset;
+                //for (int i = 0; i < parameterNum; ++i)
+                //    gen(oprType::POP, 0, 0);
+                Code[Cx].offset = Code.size();
+                gen(oprType::INT, 0, offset);               
+                /*
+                cx                              jmp
+                [cx+1,cx+paramnum]              pop           
+                cx+paramnum+1                   int 
+                cx+paramnum+2                   code.size
+                */
+                symbol->val = parameterNum;
+                symbol->address = Code.size() - 1;
+            }
+            else {
+                //for (int i = 0; i < parameterNum; ++i)
+                //    gen(oprType::POP, 0, 0);
+                Code[Cx].offset = Code.size();
+                gen(oprType::INT, 0, offset);     
+            }
+            this->ProcBody(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::RET));
             return;
         default:
             lexer.Err(ERROR::EXPECTING_BEGIN, value);
             break;
         }
     }
+
 }
 
 //<condecl> → const <const>{,<const>};
-void Parser::ProcCondecl() {
-    this->ProcConst();
-
-    while (!lexer.END) {                      
-        auto [type, value] = lexer.getToken();
-        if (type == TokenType::VAR) {           //[<vardecl>]
-            this->ProcVardecl();
-            break;
-        }
-        else if (type == TokenType::PROCEDURE) {//[<proc>]
-            this->ProcProc();
-            break;
-        }
-        else if (type == TokenType::BEGIN) {
-            this->ProcBody();
-            break;
-        }
-        else {
-            lexer.Err(ERROR::EXPECTING_BEGIN, value);
-        }
-    }
-}
-
 //<const> → <id>:=<integer>
-void Parser::ProcConst() {
-    this->ProcId(true, SymbolType::CONST);
-
-    this->ProcBecomes();
-    
-    this->ProcInteger();
-
+void Parser::ProcCondecl(int level, int &offset) {
+    this->ProcId(level, true, SymbolType::CONST, offset);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::COMMA) {         //<integer>
-            this->ProcConst();
+            this->ProcCondecl(level, offset);
             return;
         }
         else if (type == TokenType::IDENTIFIER) {
             lexer.Keep();
             lexer.Err(ERROR::MISSING_COMMA, value);
+            this->ProcCondecl(level, offset);
         }
         else if (type == TokenType::SEMICOLON) {
             return;
@@ -103,38 +124,18 @@ void Parser::ProcConst() {
 }
 
 //<vardecl> → var <id>{,<id>};
-void Parser::ProcVardecl() {
-    this->ProcVar();
-
-    while (!lexer.END) {
-        auto [type, value] = lexer.getToken();
-
-        if (type == TokenType::PROCEDURE) {//[<proc>]
-            this->ProcProc();
-            break;
-        }
-        else if (type == TokenType::BEGIN) {
-            this->ProcBody();
-            break;
-        }
-        else {
-            lexer.Err(ERROR::EXPECTING_BEGIN, value);
-        }
-    }
-}
-
 //<id>{,<id>};
-void Parser::ProcVar() {
-    this->ProcId(true, SymbolType::VAR);
+void Parser::ProcVardecl(int level, int &offset) {
+    this->ProcId(level, true, SymbolType::VAR, offset);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::COMMA) {         //var
-            this->ProcId(true, SymbolType::VAR);
+            this->ProcId(level, true, SymbolType::VAR, offset);
         }
         else if (type == TokenType::IDENTIFIER) {
             lexer.Keep();
             lexer.Err(ERROR::MISSING_COMMA, value);
-            this->ProcId(true, SymbolType::VAR);
+            this->ProcId(level, true, SymbolType::VAR, offset);
         }
         else if (type == TokenType::SEMICOLON) {
             return;
@@ -151,9 +152,10 @@ void Parser::ProcVar() {
 }
 
 //<proc> → procedure <id>（[<id>{,<id>}]）;<block>{;<proc>}
-void Parser::ProcProc() {
-    this->ProcId(true, SymbolType::PROCEDURE);
-
+void Parser::ProcProc(int level, int &offset) {
+    std::string name = this->ProcId(level, true, SymbolType::PROCEDURE, offset);
+    level += 1;
+    int allocateSize = initAllocateSize;
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::LPAREN) {         //(
@@ -169,7 +171,7 @@ void Parser::ProcProc() {
         }
     }
 
-    this->ProcProcParam();
+    this->ProcProcParam(level, allocateSize);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::SEMICOLON) {         //;
@@ -185,21 +187,23 @@ void Parser::ProcProc() {
         }
     }
 
-    this->ProcBlock();                              //<block>
-
+    this->ProcBlock(name, level, allocateSize);                              //<block>
+    stk.pop_back();
+    level -= 1;
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::SEMICOLON) {         //{;<proc>}
             while (!lexer.END) {
                 auto [type, value] = lexer.getToken();
                 if (type == TokenType::PROCEDURE) {
-                    this->ProcProc();
+                    this->ProcProc(level, offset);
                     return;
                 }
                 else {
                     lexer.Err(ERROR::EXPECTING_PROCEDURE, value);
                     lexer.Keep();
-                    this->ProcProc();
+                    this->ProcProc(level, offset);
+                    return;
                 }
             }
             return;
@@ -207,61 +211,45 @@ void Parser::ProcProc() {
         else if (type == TokenType::PROCEDURE) {
             lexer.Keep();
             lexer.Err(ERROR::MISSING_SEMICOLON, value);
-            this->ProcProc();
-            return;
-        }
-        else if (type == TokenType::BEGIN) {
-            this->ProcBody();
+            this->ProcProc(level, offset);
             return;
         }
         else {
-            lexer.Err(ERROR::EXPECTING_BEGIN, value);
+            lexer.Keep();
+            return;
         }
     }
 }
 
 // [<id>{,<id>}])
-void Parser::ProcProcParam() {
+void Parser::ProcProcParam(int level, int &offset) {
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
-        if (type == TokenType::COMMA) { 
-            lexer.Err(ERROR::MISSING_IDENTIFIER, value);
-            this->ProcId(false, SymbolType::PARAM);
-        }
-        else if (type == TokenType::IDENTIFIER) {
-            lexer.Keep();
-            break;
-        }
-        else if (type == TokenType::RPAREN) {
-            return;
-        }
-        else if (type == TokenType::SEMICOLON) {
-            lexer.Err(ERROR::MISSING_RPAREN, value);
-            lexer.Keep();
+        if (type == TokenType::RPAREN) {
             return;
         }
         else {
-            lexer.Err(ERROR::EXPECTING_RPAREN, value);
+            lexer.Keep();
+            break;
         }
     }
-    this->ProcId(false, SymbolType::PARAM);
+    this->ProcId(level, true, SymbolType::VAR, offset);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::COMMA) { 
-            this->ProcId(false, SymbolType::PARAM);
-        }
-        else if (type == TokenType::IDENTIFIER) {
-            lexer.Keep();
-            lexer.Err(ERROR::MISSING_COMMA, value);
-            this->ProcId(false, SymbolType::PARAM);
+            this->ProcId(level, true, SymbolType::VAR, offset);
         }
         else if (type == TokenType::RPAREN) {
-            return;
+            break;
         }
         else if (type == TokenType::SEMICOLON) {
             lexer.Err(ERROR::MISSING_RPAREN, value);
             lexer.Keep();
-            return;
+            break;
+        }
+        else if (type == TokenType::CONST || type == TokenType::VAR || type == TokenType::PROCEDURE || type == TokenType::BEGIN) {
+            lexer.Keep();
+            break;
         }
         else {
             lexer.Err(ERROR::EXPECTING_RPAREN, value);
@@ -270,8 +258,8 @@ void Parser::ProcProcParam() {
 }
 
 //<body> → begin <statement>{;<statement>}end
-void Parser::ProcBody() {
-    this->ProcMultiStatement();
+void Parser::ProcBody(int level) {
+    this->ProcMultiStatement(level);
 }
 
 /*
@@ -283,31 +271,33 @@ void Parser::ProcBody() {
                |read (<id>{，<id>})
                |write (<exp>{,<exp>})
 */
-void Parser::ProcStatement() {
+void Parser::ProcStatement(int level) {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         switch (type)
         {
         case TokenType::IDENTIFIER:
-            this->ProcAssign();
+            lexer.Keep();
+            this->ProcAssign(level);
             return;
         case TokenType::IF:
-            this->ProcIf();
+            this->ProcIf(level);
             return;
         case TokenType::WHILE:
-            this->ProcWhile();
+            this->ProcWhile(level);
             return;
         case TokenType::CALL:
-            this->ProcCall();
+            this->ProcCall(level);
             return;
         case TokenType::BEGIN:
-            this->ProcBody();
+            this->ProcBody(level);
             return;
         case TokenType::READ:
-            this->ProcRead();
+            this->ProcRead(level);
             return;
         case TokenType::WRITE:
-            this->ProcWrite();
+            this->ProcWrite(level);
             return;
         case TokenType::SEMICOLON:
             lexer.Keep();
@@ -325,20 +315,18 @@ void Parser::ProcStatement() {
     }
 }
 
-void Parser::ProcMultiStatement() {
-    this->ProcStatement();
+void Parser::ProcMultiStatement(int level) {
+    this->ProcStatement(level);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         if (type == TokenType::SEMICOLON) {         
-            this->ProcStatement();
+            this->ProcStatement(level);
         }
-        else if (type == TokenType::READ || type == TokenType::BEGIN || 
-                type == TokenType::CALL || type == TokenType::WRITE || 
-                type == TokenType::WHILE || type == TokenType::IF) {
-                    lexer.Keep();
-                    lexer.Err(ERROR::MISSING_SEMICOLON, value);
-                    this->ProcStatement();
-                }
+        else if (StatementBegin(type)) {
+            lexer.Keep();
+            lexer.Err(ERROR::MISSING_SEMICOLON, value);
+            this->ProcStatement(level);
+        }
         else if (type == TokenType::END) {
             return;
         }
@@ -349,117 +337,160 @@ void Parser::ProcMultiStatement() {
 }
 
 //<lexp> → <exp> <lop> <exp>|odd <exp>
-void Parser::ProcLexp() {
+void Parser::ProcLexp(int level) {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
-        switch (type)
-        {
-        case TokenType::ODD:
-            this->ProcExp();
-            return;
-        case TokenType::PLUS:
-        case TokenType::MINUS:
-        case TokenType::IDENTIFIER:
-        case TokenType::NUMBER:
-        case TokenType::LPAREN:
+        if (type == TokenType::ENDOFFILE) break;
+        if (ExpBegin(type)) {
             lexer.Keep();
-            this->ProcExp();
-            this->ProcLop();
-            this->ProcExp();
+            this->ProcExp(level);
+            auto loptype = this->ProcLop();
+            this->ProcExp(level);
+            auto oprt = oprCode::EQL;
+            switch (loptype)
+            {
+            case TokenType::EQU:
+                oprt = oprCode::EQL;
+                break;
+            case TokenType::NEQ:
+                oprt = oprCode::NEQ;
+                break;
+            case TokenType::LEQ:
+                oprt = oprCode::LEQ;
+                break;
+            case TokenType::LES:
+                oprt = oprCode::LES;
+                break;
+            case TokenType::GEQ:
+                oprt = oprCode::GEQ;
+                break;
+            case TokenType::GTR:
+                oprt = oprCode::GTR;
+                break;
+            default:
+                break;
+            }
+            gen(oprType::OPR, 0, static_cast<int>(oprt));
             return;
-        case TokenType::THEN:
-        case TokenType::DO:
+        }
+        else if (type == TokenType::ODD) {
+            this->ProcExp(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::ODD));
+            return;
+        }
+        else if (LexpEnd(type)) {
             lexer.Keep();
             lexer.Err(ERROR::MISSING_LEXPR, value);
             return;
-        case TokenType::END:
-        case TokenType::SEMICOLON:
-        case TokenType::BEGIN:
-        case TokenType::IF:
-        case TokenType::READ:
-        case TokenType::WRITE:
-        case TokenType::CALL:
-        case TokenType::WHILE:
+        }
+        else {
             lexer.Keep();
-            lexer.Err(ERROR::MISSING_STATEMENT, value);
             return;
-        default:
-            lexer.Err(ERROR::EXPECTING_EXPR, value);
-            lexer.Err(ERROR::EXPECTING_ODD, value);
         }
     }
 }
 
 //<exp> → [+|-]<term>{<aop><term>}
-void Parser::ProcExp() {
-    while (!lexer.END) {
+void Parser::ProcExp(int level) {
+    auto [type, value] = lexer.getToken();
+    if (!addop(type))
+        lexer.Keep();
+    this->ProcTerm(level);
+    if (type == TokenType::MINUS)
+        gen(oprType::OPR, 0, static_cast<int>(oprCode::NEG));
+    while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
-        switch (type) {
-        case TokenType::IDENTIFIER:
-        case TokenType::NUMBER:
-        case TokenType::LPAREN:
+        if (type == TokenType::PLUS){
+            this->ProcTerm(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::ADD));
+        }
+        else if (type == TokenType::MINUS){
+            this->ProcTerm(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::SUB));
+        }
+        else if (TermBegin(type)){
             lexer.Keep();
-        case TokenType::PLUS:
-        case TokenType::MINUS:
-            this->ProcTerm();
-            break;
-        case TokenType::ERROR:
-            lexer.Err(ERROR::EXPECTING_EXPR, value);
-            break;
-        default:
+            lexer.Err(ERROR::MISSING_OPERATOR, value);
+            this->ProcTerm(level);
+        }
+        else {
             lexer.Keep();
-            return;
+            break;
         }
     }
 }
 
-//<term> -> <term>{<aop><term>}
-void Parser::ProcTerm() {
-    this->ProcFactor();
+//<term> -> <factor>{<mop><factor>}
+void Parser::ProcTerm(int level) {
+    this->ProcFactor(level);
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
-        switch (type) {
-        case TokenType::PLUS:
-        case TokenType::MINUS:
-            this->ProcTerm();
+        if (type == TokenType::TIMES) {
+            this->ProcFactor(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::MUL));
+        }
+        else if (type == TokenType::SLASH) {
+            this->ProcFactor(level);
+            gen(oprType::OPR, 0, static_cast<int>(oprCode::DIV));
+        }
+        else if (TermBegin(type)) {
+            lexer.Keep();
+            lexer.Err(ERROR::MISSING_OPERATOR, value);
+            this->ProcFactor(level);
             break;
-        case TokenType::IDENTIFIER:
-        case TokenType::NUMBER:
-        case TokenType::LPAREN:
+        }
+        else if (TermEnd(type)) {
             lexer.Keep();
-            lexer.Err(ERROR::MISSING_ADDOPERATOR, value);
-            this->ProcTerm();
             break;
-        case TokenType::ERROR:
-            lexer.Err(ERROR::EXPECTING_ADDOPERATOR, value);
+        }
+        else if (type == TokenType::ERROR) {
+            lexer.Err(ERROR::EXPECTING_OPERATOR, value);
+            break;    
+        }
+        else {
             lexer.Keep();
-            return;
-        default:
-            lexer.Keep();
-            return;
+            break;
         }
     }
 }
 
 //<factor>→<id>|<integer>|(<exp>)
-void Parser::ProcFactor() {
+void Parser::ProcFactor(int level) {
+    int _ = 1;
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::IDENTIFIER) {
             lexer.Keep();
-            this->ProcId(false, SymbolType::NONE);
+            this->ProcId(level, false, SymbolType::VAR, _);
+            if (last == nullptr) break;
+            switch (last->type)
+            {
+            case SymbolType::PROGRAM:
+            case SymbolType::PROCEDURE:
+                lexer.Err(ERROR::EXPECTING_VAR_CONST_INTEGER, value);
+                break;
+            case SymbolType::VAR:
+                gen(oprType::LOD, level - last->level, last->address);
+                break;
+            case SymbolType::CONST:
+                gen(oprType::LIT, 0, last->val);
+                break;
+            default:
+                break;
+            }
             break;
         }
         else if (type == TokenType::NUMBER) {
             lexer.Keep();
-            this->ProcInteger();
+            int val = this->ProcInteger();
+            gen(oprType::LIT, 0, val);
             break;
         }
         else if (type == TokenType::LPAREN) {
-            this->ProcExp();
+            this->ProcExp(level);
             while (!lexer.END) {
                 auto [type, value] = lexer.getToken();
-                if (type == TokenType::ENDOFFILE) return;
                 if (type == TokenType::RPAREN) {
                     break;
                 }
@@ -469,41 +500,28 @@ void Parser::ProcFactor() {
                 else {
                     lexer.Err(ERROR::MISSING_RPAREN, value);
                     lexer.Keep();
-                    return;
+                    break;
                 }
             }
             break;
         }
-        else {
-            lexer.Err(ERROR::EXPECTING_FACTOR, value);
+        else if (StatementEnd(type) || StatementBegin(type)) {
+            lexer.Keep();
+            break;
         }
-    }
-    while (!lexer.END) {                      
-        auto [type, value] = lexer.getToken();
-        switch (type) {
-        case TokenType::TIMES:
-        case TokenType::SLASH:
-            this->ProcFactor();
-            break;
-        case TokenType::IDENTIFIER:
-        case TokenType::NUMBER:
-        case TokenType::LPAREN:
+        else if (FactorEnd(type)) {
             lexer.Keep();
-            lexer.Err(ERROR::MISSING_MULOPERATOR, value);
-            this->ProcFactor();
+            lexer.Err(ERROR::MISSING_FACTOR, value);
             break;
-        case TokenType::ERROR:
-            lexer.Err(ERROR::EXPECTING_MULOPERATOR, value);
-            break;
-        default:
-            lexer.Keep();
-            return;
+        }
+        else{
+            lexer.Err(ERROR::EXPECTING_FACTOR, value);
         }
     }
 }
 
 //<lop> → =|<>|<|<=|>|>=
-void Parser::ProcLop() {
+TokenType Parser::ProcLop() {
     while (!lexer.END) {                      
         auto [type, value] = lexer.getToken();
         switch (type) {
@@ -513,125 +531,141 @@ void Parser::ProcLop() {
         case TokenType::LEQ:
         case TokenType::GTR:
         case TokenType::GEQ:
-            return;
+            return type;
+        case TokenType::LPAREN:
+        case TokenType::PLUS:
+        case TokenType::MINUS:
+        case TokenType::IDENTIFIER:
+        case TokenType::NUMBER:
+            lexer.Keep();
+            return type;
         default:
             lexer.Keep();
-            lexer.Err(ERROR::EXPECTING_CMPOPERATOR, value);
-            return;
+            lexer.Err(ERROR::EXPECTING_OPERATOR, value);
+            return type;
         }
     }
+    return TokenType::EQU;
 }
 
 //<id> → l{l|d}
-void Parser::ProcId(bool decl, SymbolType Stype) {
+std::string Parser::ProcId(int level, bool decl, SymbolType Stype, int &offset) {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::IDENTIFIER) {
-            //TODO
             if (decl) {
+                if (!stk.empty() && stk.back()->exist(value->name)) {
+                    if (Stype == SymbolType::PROCEDURE)
+                        lexer.Err(ERROR::REDEFINITION_OF_PROCEDURE, value);
+                    else 
+                        lexer.Err(ERROR::REDEFINITION_OF_IDENTIFIER, value);
+                }
                 switch (Stype) {
-                case SymbolType::CONST:
-
+                case SymbolType::CONST: {
+                    this->ProcBecomes();
+                    int val = this->ProcInteger();
+                    if (val != -1)
+                        stk.back()->insert(value->name, Symbol(SymbolType::CONST, val, offset, level));
                     break;
-                case SymbolType::PARAM:
-
+                }
+                case SymbolType::PROCEDURE: {
+                    stk.back()->insert(value->name, Symbol(SymbolType::PROCEDURE, -1, -1, level, initAllocateSize));
+                    auto [it, success] = stk.back()->childs.insert({value->name, SymbolTable(value->name, level, stk.back())});
+                    stk.push_back(&(it->second));
                     break;
-                case SymbolType::PROCEDURE:
-
+                }
+                case SymbolType::VAR: {
+                    stk.back()->insert(value->name, Symbol(SymbolType::VAR, -1, offset++, level));
                     break;
-                case SymbolType::PROGRAM:
-
+                }
+                case SymbolType::PROGRAM: {
+                    this->base = SymbolTable(value->name);
+                    stk.push_back(&base);
                     break;
-                case SymbolType::VAR:
-
-                    break;
-                case SymbolType::NONE:
-
-                    break;
+                }
                 }
             }
             else {
-                switch (Stype) {
-                case SymbolType::CONST:
-
-                    break;
-                case SymbolType::PARAM:
-
-                    break;
-                case SymbolType::PROCEDURE:
-
-                    break;
-                case SymbolType::PROGRAM:
-
-                    break;
-                case SymbolType::VAR:
-
-                    break;
-                case SymbolType::NONE:
-
-                    break;
+                if (stk.empty()) return nullptr;
+                auto [name, symbol] = stk.back()->search(value->name);
+                if (symbol == nullptr) {
+                    lexer.Err(ERROR::UNDECLARED_IDENTIFIER, value);
                 }
+                if (Stype == SymbolType::PROCEDURE && symbol->type != SymbolType::PROCEDURE) {
+                    lexer.Err(ERROR::EXPECTING_PROCEDURE, value);
+                }
+                last = symbol;
             }
-            return;
+            return value->name;
         }
         else if (type == TokenType::COMMA || type == TokenType::SEMICOLON || type == TokenType::LPAREN) {
             lexer.Err(ERROR::MISSING_IDENTIFIER, value);
             lexer.Keep();
-            return;
+            return "";
         }
         else if (type == TokenType::ERROR) {
-            continue;
+            return "";
         }
         else if (isKeyword(value->name) != TokenType::ERROR) {
             lexer.Err(ERROR::EXPECTING_IDENTIFIER, value);
             lexer.Keep();
-            return;
+            return "";
         }
         else {
             lexer.Err(ERROR::EXPECTING_IDENTIFIER, value);
         }
     }
+    return "";
 }
 
 //<integer> → d{d}
-void Parser::ProcInteger() {
+int Parser::ProcInteger() {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::NUMBER) {
-            //TODO
-            int val = 0;
+            int val = -1;
             try {
                 val = std::stoi(value->name);
             }
             catch (std::out_of_range const& ex) {
                 lexer.Err(ERROR::OUT_OF_RANGE, value);
-                val = 0;
+                val = -1;
             }
-            return;
+            return val;
         }
         else if (type == TokenType::COMMA || type == TokenType::SEMICOLON) {
             lexer.Err(ERROR::MISSING_INTEGER, value);
             lexer.Keep();
-            return;
+            return -1;
         }
         else if (isKeyword(value->name) != TokenType::ERROR) {
             lexer.Keep();
-            return;
+            return -1;
         }
         else {
             lexer.Err(ERROR::EXPECTING_INTEGER, value);
         }
     }
+    return -1;
 }
 
 //if <lexp> then <statement>[else <statement>]
-void Parser::ProcIf() {
-    this->ProcLexp();
-
+void Parser::ProcIf(int level) {
+    this->ProcLexp(level);
+    int cx1, cx2;
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::THEN) {
-            this->ProcStatement();
+            cx1 = Code.size();
+            gen(oprType::JPC, 0, 0);
+            this->ProcStatement(level);
+            cx2 = Code.size();
+            gen(oprType::JMP, 0, 0);
+            Code[cx1].offset = Code.size();
+            Code[cx2].offset = Code.size();
             break;
         }
         else if (type == TokenType::ELSE) {
@@ -644,18 +678,26 @@ void Parser::ProcIf() {
                 || type == TokenType::BEGIN || type == TokenType::READ || type == TokenType::WRITE) {
             lexer.Keep();
             lexer.Err(ERROR::MISSING_THEN, value);
-            this->ProcStatement();
+            this->ProcStatement(level);
             break;
         }
         else {
             lexer.Err(ERROR::EXPECTING_THEN, value);
         }
     }
-    
+    /*
+             lexp       if
+    cx1      jpc        
+             ....       then_block
+    cx2      jmp        
+             ....       else_block
+    */
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::ELSE) {
-            this->ProcStatement();
+            this->ProcStatement(level);
+            Code[cx2].offset = Code.size();
             return;
         }
         else if (type == TokenType::SEMICOLON || type == TokenType::END) {
@@ -675,12 +717,15 @@ void Parser::ProcIf() {
 }
 
 //while <lexp> do <statement>
-void Parser::ProcWhile() {
-    this->ProcLexp();
-
+void Parser::ProcWhile(int level) {
+    int cx1 = Code.size();
+    this->ProcLexp(level);
+    int cx2 = Code.size();
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::DO) {
+            gen(oprType::JPC, 0, 0);
             break;
         }
         else if (type == TokenType::SEMICOLON || type == TokenType::END) {
@@ -700,20 +745,29 @@ void Parser::ProcWhile() {
         }
     }
 
-    this->ProcStatement();
+    this->ProcStatement(level);
+    gen(oprType::JMP, 0, cx1);
+    Code[cx2].offset = Code.size();
 }
 
 //call <id>（[<exp>{,<exp>}]）
-void Parser::ProcCall() {
-    this->ProcId(false, SymbolType::PROCEDURE);
-
+void Parser::ProcCall(int level) {
+    int ofst = 1;
+    this->ProcId(level, false, SymbolType::PROCEDURE, ofst);
+    Symbol* procedure = last;
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::LPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_LPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
+            lexer.Err(ERROR::MISSING_STATEMENT, value);
             lexer.Keep();
             break;
         }
@@ -722,23 +776,51 @@ void Parser::ProcCall() {
         }
     }
 
-
-    this->ProcCallParam();
+    int cnt = this->ProcCallParam(level);
+    if (procedure != nullptr) {
+        if (cnt != procedure->val) {
+            lexer.Err(ERROR::INCORRECT_PARAMETERS, cnt, procedure->val);
+        }
+        for (int i = 0; i < procedure->val; ++i)
+            gen(oprType::POP, 0, 0);
+        gen(oprType::CAL, level - procedure->level, procedure->address);
+    }
 }
 
 //[<exp>{,<exp>}])
-void Parser::ProcCallParam() {
-    this->ProcExp();
+int Parser::ProcCallParam(int level) {
+    int cnt = 0;
+    if (!lexer.END) {                      
+        auto [type, value] = lexer.getToken();
+        if (type == TokenType::RPAREN) { 
+            return cnt;
+        }
+        else 
+            lexer.Keep();
+    }
+    this->ProcExp(level);
+    ++cnt;
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::COMMA) {
-            this->ProcExp();
+            this->ProcExp(level);
+            ++cnt;
         }
         else if (type == TokenType::RPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (ExpBegin(type)) {
+            lexer.Err(ERROR::MISSING_EXPR, value);
+            this->ProcExp(level);
+            ++cnt;
+        }
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_RPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
             lexer.Keep();
             break;
         }
@@ -746,17 +828,23 @@ void Parser::ProcCallParam() {
             lexer.Err(ERROR::EXPECTING_RPAREN, value);
         }
     }
-
+    return cnt;
 }
 
-void Parser::ProcRead() {
+void Parser::ProcRead(int level) {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::LPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_LPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
+            lexer.Err(ERROR::MISSING_STATEMENT, value);
             lexer.Keep();
             break;
         }
@@ -764,22 +852,32 @@ void Parser::ProcRead() {
             lexer.Err(ERROR::EXPECTING_LPAREN, value);
         }
     }
-    this->ProcReadParam();
+    this->ProcReadParam(level);
 }
 
 //<id>{，<id>})
-void Parser::ProcReadParam() {
-    this->ProcId(false, SymbolType::VAR);
+void Parser::ProcReadParam(int level) {
+    int ofst = 1;
+    this->ProcId(level, false, SymbolType::VAR, ofst);
+    if (last != nullptr)
+        gen(oprType::RED, level - last->level, last->address);
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::COMMA) {
-            this->ProcId(false, SymbolType::VAR);
+            this->ProcId(level, false, SymbolType::VAR, ofst);
+            if (last != nullptr)
+                gen(oprType::RED, level - last->level, last->address);
         }
         else if (type == TokenType::RPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_RPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
             lexer.Keep();
             break;
         }
@@ -790,14 +888,20 @@ void Parser::ProcReadParam() {
 }
 
 //write (<exp>{,<exp>})
-void Parser::ProcWrite() {
+void Parser::ProcWrite(int level) {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::LPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_LPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
+            lexer.Err(ERROR::MISSING_STATEMENT, value);
             lexer.Keep();
             break;
         }
@@ -805,22 +909,30 @@ void Parser::ProcWrite() {
             lexer.Err(ERROR::EXPECTING_LPAREN, value);
         }
     }
-    this->ProcWriteParam();
+    this->ProcWriteParam(level);
+    gen(oprType::OPR, 0, static_cast<int>(oprCode::LIN));
 }
 
 //<exp>{,<exp>})
-void Parser::ProcWriteParam() {
-    this->ProcExp();
+void Parser::ProcWriteParam(int level) {
+    this->ProcExp(level);
+    gen(oprType::WRT, 0, 0);
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::COMMA) {
-            this->ProcExp();
+            this->ProcExp(level);
+            gen(oprType::WRT, 0, 0);
         }
         else if (type == TokenType::RPAREN) {
             break;
         }
-        else if (type == TokenType::SEMICOLON || type == TokenType::END) {
+        else if (StatementEnd(type)) {
             lexer.Err(ERROR::MISSING_RPAREN, value);
+            lexer.Keep();
+            break;
+        }
+        else if (StatementBegin(type)) {
             lexer.Keep();
             break;
         }
@@ -830,14 +942,21 @@ void Parser::ProcWriteParam() {
     }
 }
 
-void Parser::ProcAssign() {
+void Parser::ProcAssign(int level) {
+    int ofst = 1;
+    this->ProcId(level, false, SymbolType::VAR, ofst);
+    Symbol* assign = last;
     this->ProcBecomes();
-    this->ProcExp();
+    this->ProcExp(level);
+    if (assign != nullptr) {
+        gen(oprType::STO, level - assign->level, assign->address);
+    }
 }
 
 void Parser::ProcBecomes() {
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::BECOMES) {
             return;
         }
@@ -853,27 +972,68 @@ void Parser::ProcBecomes() {
     }
 }
 
-void Parser::loadFile(const char* FilePath){
-    lexer.LoadFile(FilePath);
+void Parser::loadFile(const std::string& path){
+    lexer.LoadFile(path);
+    base = SymbolTable("main");
+    Code.clear();
+    Code.reserve(maxCodeSize);
+    stk.clear();
 }
 
 void Parser::analyze(){
-    /*TODO*/
     while (!lexer.END) {
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) break;
         if (type == TokenType::PROGRAM) {
             ProcProg();
             break;
         }
         else lexer.Err(ERROR::EXPECTING_PROGRAM, value);
     }
-    lexer.WriteFile();
+    if (lexer.error.ErrCnt != 0) {
+        std::cout << "Build Error : " << lexer.error.ErrCnt << std::endl;
+        exit(0);
+    }
+    else {
+        std::cout << "Build Success." << std::endl;
+    }
 }
 
-Parser::Parser()
-{
+void Parser::write() {
+    std::filesystem::path WritePath = lexer.Path.replace_extension(".token");
+    lexer.write(WritePath);
+    WritePath = lexer.Path.replace_extension(".symbol");
+    std::ofstream OutputFile;
+    OutputFile.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+    try {
+        OutputFile.open(WritePath);
+        base.write(OutputFile);
+        OutputFile.close();
+        std::cout << "SYMBOL_TABLE IS WRITED IN " << WritePath << std::endl;
+    } 
+    catch (std::ofstream::failure& e) {
+        std::cout << "Write Error: " << e.what() << std::endl;
+        std::cout << "From " << WritePath << std::endl;
+        return;
+    }
+    if (lexer.error.ErrCnt != 0) return;
+    WritePath = WritePath.replace_extension(".pcode");
+    try {
+        OutputFile.open(WritePath);
+        std::for_each(Code.begin(), Code.end(), [&OutputFile](const Ins& ins) {
+            OutputFile << ins.str() << '\n';
+        });
+        OutputFile.close();
+        std::cout << "PCODE IS WRITED IN " << WritePath << std::endl;
+    } 
+    catch (std::ofstream::failure& e) {
+        std::cout << "Write Error: " << e.what() << std::endl;
+        std::cout << "From " << WritePath << std::endl;
+        return;
+    }
 }
 
-Parser::~Parser()
-{
+void Parser::gen(oprType type, int l, int a) {
+    if (lexer.error.ErrCnt != 0) return;
+    Code.push_back(Ins(type, l, a));
 }

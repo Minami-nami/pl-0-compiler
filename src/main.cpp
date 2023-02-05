@@ -1,38 +1,43 @@
-#include <bits/stdc++.h>
-#include <windows.h>
+#include "Interpreter.h"
 
-using namespace std;
+void menu() {
+	std::cout << "__________________________________________________________________\n"
+				 "1.run\n2.show Pcode\n3.show Symbol Table\n4.show Tokens\n5.exit\n>>";
+}
 
-int main(int argc, char** argv)
+int main(int argc, char *argv[])
 {
-    SetConsoleOutputCP(65001);
-    stringstream CodeStream;
-    filesystem::path Path;
-    auto loadfile = [&CodeStream, &Path](const char* FilePath) {
-        Path = std::string(FilePath);
-        std::ifstream CodeFile;
-        CodeFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-        try {
-            CodeFile.open(Path);
-            CodeStream << CodeFile.rdbuf();
-            CodeStream << '\n';
-            CodeFile.close();
-        }
-        catch (std::ifstream::failure& e) {
-            std::cout << "Load Error: " << e.what() << std::endl;
-            std::cout << "From " << Path << std::endl;
-            return false;
-        }
-        return true;
-    };
-	if (argc <= 1) {
-		std::string s;
-		std::cout << "请输入文件路径: ";
-		std::cin >> s;
-		loadfile(s.c_str());
+	Interpreter interpreter(argc, argv);
+	while (1) {
+		int choice;
+		menu();
+		if (!(std::cin >> choice)) {
+			std::cout << "Invalid Input!\n";
+			std::cin.clear();
+			std::cout << "__________________________________________________________________\n";
+			continue;
+		}
+		std::cout << "__________________________________________________________________\n";
+		switch (choice)
+		{
+		case 1:
+			interpreter.run();
+			break;
+		case 2:
+			interpreter.printPcode();
+			break;
+		case 3:
+			interpreter.printSymbolTable();
+			break;
+		case 4:
+			interpreter.printTokens();
+			break;
+		case 5:
+			exit(0);
+		default:
+			std::cout << "Invalid Choice!\n";
+		}
 	}
-	else
-		loadfile(argv[1]);
-    printf("%s", Path.string().c_str());
-    return 0;
+	
+	return 0;
 }

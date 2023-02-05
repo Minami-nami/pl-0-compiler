@@ -9,26 +9,10 @@ target("includes")
     add_files("include/*.cpp")
 target_end()
 
-target("test")
+target("interpreter")
+    add_deps("includes")
     set_kind("binary")
     add_files("src/main.cpp")
-target_end()
-
-target("lexer")
-    set_kind("binary")
-    add_deps("includes")
-    add_files("src/lexer/*.cpp")
-target_end()
-
-target("parser")
-    set_kind("binary")
-    add_deps("includes")
-    add_files("src/parser/*.cpp")
-target_end()
-
-target("sample")
-    set_kind("binary")
-    add_files("src/Sample/pl0.cpp")
 target_end()
 
 

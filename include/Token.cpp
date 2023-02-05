@@ -50,3 +50,69 @@ Token::Token(const std::string& name, TokenType type, int row, int col)
 Token::~Token()
 {
 }
+
+bool StatementBegin(TokenType type) {
+    return type == TokenType::IDENTIFIER || type == TokenType::CALL || type == TokenType::BEGIN || type == TokenType::IF ||
+           type == TokenType::WHILE || type == TokenType::WRITE || type == TokenType::READ;
+};
+
+bool StatementEnd(TokenType type) {
+    return type == TokenType::END || type == TokenType::SEMICOLON;
+};
+
+bool BlockBegin(TokenType type) {
+    return StatementBegin(type) || type == TokenType::CONST || type == TokenType::PROCEDURE || type == TokenType::VAR;
+};
+
+bool BlockEnd(TokenType type) {
+    return type == TokenType::END;
+};
+
+bool cmpop(TokenType type) {
+    return type == TokenType::EQU || type == TokenType::NEQ || type == TokenType::GTR ||
+           type == TokenType::GEQ || type == TokenType::LES || type == TokenType::LEQ;
+};
+
+bool addop(TokenType type) {
+    return type == TokenType::PLUS || type == TokenType::MINUS;
+};
+
+bool mulop(TokenType type) {
+    return type == TokenType::TIMES || type == TokenType::SLASH;
+};
+
+bool op(TokenType type) {
+    return cmpop(type) || addop(type) || mulop(type);
+};
+
+bool FactorBegin(TokenType type) {
+    return type == TokenType::IDENTIFIER || type == TokenType::NUMBER || type == TokenType::LPAREN;
+}
+
+bool FactorEnd(TokenType type) {
+    return TermEnd(type) || mulop(type);
+}
+
+bool TermBegin(TokenType type) {
+    return FactorBegin(type);
+}
+
+bool TermEnd(TokenType type) {
+   return ExpEnd(type) || addop(type);
+}
+
+bool ExpBegin(TokenType type) {
+    return FactorBegin(type) || addop(type);
+}
+
+bool ExpEnd(TokenType type) {
+    return StatementEnd(type) || cmpop(type) || LexpEnd(type) || type == TokenType::RPAREN || type == TokenType::COMMA;
+}
+
+bool LexpBegin(TokenType type) {
+    return ExpBegin(type) || type == TokenType::ODD;
+}
+
+bool LexpEnd(TokenType type) {
+    return type == TokenType::THEN || type == TokenType::DO;
+}
