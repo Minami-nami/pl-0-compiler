@@ -1,0 +1,22 @@
+program p;
+var b, sum, maxlevel;
+	procedure p1();
+	begin
+		if b <= maxlevel then
+        begin
+            sum := sum + b;
+            b := b + 1;
+            call p1()
+        end
+	end	
+begin 
+    read(maxlevel);
+    while maxlevel <> 0 do
+    begin
+        b := 1;
+        sum := 0;
+	    call p1();
+	    write(b - 1, sum);
+        read(maxlevel)
+    end
+end

@@ -1,0 +1,11 @@
+program p1;
+const c1 := 1, c2 := 2;
+	procedure p2();
+	const c1 := 5;
+	begin
+		write(c1, c2)
+	end
+begin 
+	call p2();
+	write(c1, c2)
+end
