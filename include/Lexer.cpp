@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_map>
+#include "ConsoleColor.h"
 
 /*
 <prog> → program <id>；<block>
@@ -75,8 +76,8 @@ bool Lexer::LoadFile(const std::string& FilePath) {
         CodeFile.close();
     }
     catch (std::ifstream::failure& e) {
-        std::cout << "Load Error: " << e.what() << std::endl;
-        std::cout << "From " << Path << std::endl;
+        std::cout << red << "Load Error: " << white << e.what() << std::endl;
+        std::cout << "From " << blue << Path << white << std::endl;
         return false;
     }
     std::getline(CodeStream, linebuf);
@@ -117,11 +118,11 @@ bool Lexer::write(const std::filesystem::path& WritePath) {
         TokenFile.close();
     } 
     catch (std::ofstream::failure& e) {
-        std::cout << "Write Error: " << e.what() << std::endl;
-        std::cout << "From " << WritePath << std::endl;
+        std::cout << red << "Write Error: " << white << e.what() << std::endl;
+        std::cout << "From " << blue << WritePath << white << std::endl;
         return false;
     }
-    std::cout << "TOKEN_TABLE IS WRITED IN " << WritePath << std::endl;
+    std::cout << "TOKEN_TABLE IS WRITED IN " << blue << WritePath << white << std::endl;
     return true;
 }
 

@@ -1,4 +1,5 @@
 #include "Interpreter.h"
+#include "ConsoleColor.h"
 #include <windows.h>
 #include <string>
 #include <filesystem>
@@ -19,7 +20,7 @@ Interpreter::Interpreter(int argc, char* argv[]) {
     auto dir = std::filesystem::path(FilePath).parent_path();
     FilePath = std::filesystem::path(FilePath).filename().string();
     std::filesystem::current_path(dir);
-    std::cout << "cwd: " << dir << std::endl;
+    std::cout << "cwd: " << blue << dir << white << std::endl;
 	compiler.run(FilePath);
     init();
 }
@@ -41,7 +42,7 @@ void Interpreter::init() {
                     if(strLine.empty())
                         continue;
                     if (CodeLen >= maxCodeSize) {
-                        std::cout << "error: Exceed MaxCodeSize!\n";
+                        std::cout << red << "error: " << white << "Exceed MaxCodeSize!\n";
                         exit(0);
                     }
                     Code[CodeLen++] = Ins(strLine);
@@ -68,7 +69,7 @@ void Interpreter::run() {
      */
     do {
         [[unlikely]] if (stackTopReg >= maxStackSize) {
-            std::cout << "error: Stack Overflow!\n";
+            std::cout << red << "error: " << white << "Stack Overflow!\n";
             exit(0);
         }
         InsReg = Code[ProgAddrReg++];

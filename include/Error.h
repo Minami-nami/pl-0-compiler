@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <filesystem>
+
 enum class ERROR {
     ILEGAL_CHARACTER,
     ILEGAL_IDENTIFIER,

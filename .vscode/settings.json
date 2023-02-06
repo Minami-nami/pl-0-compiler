@@ -3,7 +3,7 @@
         "default": ["${workspaceFolder}/static/samples/sample5.pl0"]
     },
     "xmake.runningTargetsArguments": {
-        "default": ["${workspaceFolder}/static/samples/sample13.pl0"]
+        "default": ["${workspaceFolder}/static/samples/sample1.pl0"]
     },
     "files.associations": {
         "array": "cpp",

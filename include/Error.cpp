@@ -1,4 +1,6 @@
 #include "Error.h"
+#include "ConsoleColor.h"
+#include <regex>
 
 constexpr int maxErrCnt = 128;
 
@@ -59,25 +61,35 @@ void Error::ProcError(ERROR etype, int row, int col, const std::string& token, c
         printf("Too much error(%d)!\n", ErrCnt);
         exit(0);
     }
-    printf("%s:%d:%d: error: %s\n", path.c_str(), row, col, toString(etype).c_str());
-    printf("%5d |     %s", row, line.c_str());
+    printf("%s:%d:%d: ", path.c_str(), row, col);
+    std::cout << red << "error: " << white;
+    printf("%s\n", toString(etype).c_str());
+    printf("%5d |     ", row);
+    printf("%s", std::regex_replace(line, std::regex("\t"), "    ").c_str());
     printf("      |     ");
     int curcol = 1;
     while(curcol++ < col) {
         putchar(' ');
     }
+    std::cout << yellow;
     putchar('^');
     curcol = 1;
     while (curcol++ < token.size()) {
         putchar('~');
     }
+    std::cout << white;
     putchar('\n');
 }
 
 void Error::ProcError(ERROR etype, int real, int expected) {
     if (++ErrCnt > maxErrCnt) {
+        std::cout << red;
         printf("Too much error(%d)!\n", ErrCnt);
+        std::cout << white;
         exit(0);
     }
-    printf("error: %s %d, %d is expected.\n",toString(etype).c_str(), real, expected);
+    std::cout << red;
+    printf("error: ");
+    std::cout << white;
+    printf("%s %d, %d is expected.\n",toString(etype).c_str(), real, expected);
 }

@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/windows/x64/debug/interpreter.exe",
-            "args": ["${workspaceFolder}/static/samples/sample9.pl0"],
+            "args": ["${workspaceFolder}/static/samples/sample1.pl0"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

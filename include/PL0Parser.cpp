@@ -3,6 +3,7 @@
 #include <string.h>
 #include <algorithm>
 #include <fstream>
+#include "ConsoleColor.h"
 constexpr int initAllocateSize = 3;
 constexpr int maxNestLevel = 4;
 
@@ -12,6 +13,7 @@ void Parser::ProcProg() {
     std::string name = this->ProcId(0, true, SymbolType::PROGRAM, allocateSize);                             //<id>
     while (!lexer.END) {                      //;
         auto [type, value] = lexer.getToken();
+        if (type == TokenType::ENDOFFILE) return;
         if (type == TokenType::SEMICOLON) {
             break;
         }
@@ -605,6 +607,16 @@ std::string Parser::ProcId(int level, bool decl, SymbolType Stype, int &offset) 
             return "";
         }
         else if (type == TokenType::ERROR) {
+            if (Stype == SymbolType::PROCEDURE) {
+                std::string name = stk.back()->name + std::to_string(std::hash<std::string>{}(stk.back()->name));
+                stk.back()->insert(name, Symbol(SymbolType::PROCEDURE, -1, -1, level, initAllocateSize));
+                auto [it, success] = stk.back()->childs.insert({name, SymbolTable(name, level, stk.back())});
+                stk.push_back(&(it->second));
+            }
+            else if (Stype == SymbolType::PROGRAM) {
+                this->base = SymbolTable("main");
+                stk.push_back(&base);
+            }
             return "";
         }
         else if (isKeyword(value->name) != TokenType::ERROR) {
@@ -991,11 +1003,11 @@ void Parser::analyze(){
         else lexer.Err(ERROR::EXPECTING_PROGRAM, value);
     }
     if (lexer.error.ErrCnt != 0) {
-        std::cout << "Build Error : " << lexer.error.ErrCnt << std::endl;
+        std::cout << red << "Build Error : " << white << lexer.error.ErrCnt << std::endl;
         exit(0);
     }
     else {
-        std::cout << "Build Success." << std::endl;
+        std::cout << green << "Build Success." << white << std::endl;
     }
 }
 
@@ -1009,11 +1021,11 @@ void Parser::write() {
         OutputFile.open(WritePath);
         base.write(OutputFile);
         OutputFile.close();
-        std::cout << "SYMBOL_TABLE IS WRITED IN " << WritePath << std::endl;
+        std::cout << "SYMBOL_TABLE IS WRITED IN " << blue << WritePath << white << std::endl;
     } 
     catch (std::ofstream::failure& e) {
-        std::cout << "Write Error: " << e.what() << std::endl;
-        std::cout << "From " << WritePath << std::endl;
+        std::cout << red << "Write Error: " << white << e.what() << std::endl;
+        std::cout << "From " << blue << WritePath << white << std::endl;
         return;
     }
     if (lexer.error.ErrCnt != 0) return;
@@ -1024,11 +1036,11 @@ void Parser::write() {
             OutputFile << ins.str() << '\n';
         });
         OutputFile.close();
-        std::cout << "PCODE IS WRITED IN " << WritePath << std::endl;
+        std::cout << "PCODE IS WRITED IN " << blue << WritePath << white << std::endl;
     } 
     catch (std::ofstream::failure& e) {
-        std::cout << "Write Error: " << e.what() << std::endl;
-        std::cout << "From " << WritePath << std::endl;
+        std::cout << red << "Write Error: " << white << e.what() << std::endl;
+        std::cout << "From " << blue << WritePath << white << std::endl;
         return;
     }
 }
