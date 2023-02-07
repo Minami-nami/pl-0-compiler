@@ -7,6 +7,7 @@ build/
 
 # Code Sample
 static/SyntaxAnalysisChart
+static/mainFlowchart
 static/samples/*.pcode
 static/samples/*.token
 static/samples/*.symbol

@@ -39,14 +39,14 @@
 odd：判断表达式的奇偶性。
 */
 enum class state {
-    BEGIN,
-    WORD,
-    NUMBER,
+    BEGIN,          //初始状态
+    WORD,           //标识符
+    NUMBER,         //数字
     COLON,          //  :
     LES,            //  <
     GTR,            //  >
-    NUMWORD,
-    ILEGALCH
+    NUMWORD,        //数字开头的标识符
+    ILEGALCH        //非法字符
 };
 
 const std::unordered_map<char, TokenType> LegalCh = {

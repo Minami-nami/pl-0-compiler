@@ -568,7 +568,7 @@ std::string Parser::ProcId(int level, bool decl, SymbolType Stype, int &offset) 
                     this->ProcBecomes();
                     int val = this->ProcInteger();
                     if (val != -1)
-                        stk.back()->insert(value->name, Symbol(SymbolType::CONST, val, offset, level));
+                        stk.back()->insert(value->name, Symbol(SymbolType::CONST, val, offset, level, 0));
                     break;
                 }
                 case SymbolType::PROCEDURE: {
